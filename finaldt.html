@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Letter‑Builder Quiz – Unit 1 & 2</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8;
+    --accent:#22d3ee; --accent2:#60a5fa; --ok:#10b981; --bad:#ef4444; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a 35%,#0b1220);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial}
+  .container{max-width:980px;margin:24px auto;padding:20px}
+  .card{background:rgba(17,24,39,.75);backdrop-filter:blur(6px);border:1px solid rgba(148,163,184,.15);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 6px;font-size:clamp(22px,3.6vw,34px)}
+  p.lead{margin:.25rem 0 1rem;color:var(--muted)}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .badge{border:1px solid rgba(148,163,184,.25);padding:4px 10px;border-radius:999px;color:var(--muted);font-size:.85rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{appearance:none;border:1px solid transparent;background:var(--accent2);color:#081028;font-weight:700;padding:10px 14px;border-radius:12px;cursor:pointer;transition:.2s ease}
+  button.secondary{background:transparent;border-color:rgba(148,163,184,.35);color:var(--text)}
+  button.ghost{background:transparent;color:var(--text)}
+  button:disabled{opacity:.55;cursor:not-allowed}
+
+  .progress{height:10px;background:rgba(148,163,184,.2);border-radius:999px;overflow:hidden;margin:6px 0 12px}
+  .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s ease}
+
+  .qwrap{border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:16px;min-height:220px}
+  .qwrap h3{margin:0 0 8px;font-size:1.02rem}
+  .difficulty{font-size:.8rem;color:var(--muted)}
+
+  .sentence{margin:10px 0 12px;line-height:1.9}
+  .slot{display:inline-flex;align-items:center;justify-content:center;width:28px;height:34px;margin:0 4px;border-bottom:2px dashed rgba(148,163,184,.35);border-radius:6px;background:rgba(148,163,184,.08);font-weight:700;letter-spacing:.5px}
+  .slot.filled{border-bottom-color:rgba(96,165,250,.8)}
+
+  .bank{display:flex;flex-wrap:wrap;gap:8px}
+  .tile{border:1px solid rgba(148,163,184,.3);background:transparent;color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer;transition:.2s;font-weight:700;min-width:36px;text-align:center}
+  .tile:hover{border-color:var(--accent)}
+  .tile.used{opacity:.4;pointer-events:none}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+  .result{margin-top:16px;padding:14px;border-radius:12px;background:rgba(96,165,250,.08);border:1px dashed rgba(96,165,250,.35)}
+  .hidden{display:none!important}
+
+  .review{margin-top:18px;display:grid;gap:14px}
+  .rev-card{border:1px solid rgba(148,163,184,.2);border-radius:14px;padding:14px;background:rgba(17,24,39,.55)}
+  .rev-title{margin:0 0 6px;font-size:1rem}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78rem;border:1px solid rgba(148,163,184,.3);color:var(--muted)}
+  .pill.correct{border-color:rgba(16,185,129,.5);color:#c8ffe3}
+  .pill.wrong{border-color:rgba(239,68,68,.6);color:#ffd2d2}
+  .explain{color:var(--muted);font-size:.95rem;margin-top:6px}
+
+  /* Lifeline modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000}
+  .overlay.hidden{display:none!important}
+  .modal{background:var(--panel);border:1px solid rgba(148,163,184,.25);border-radius:16px;padding:18px;max-width:420px;width:92%}
+  .modal h4{margin:0 0 8px}
+  .modal p{margin:8px 0 14px}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Letter‑Builder Quiz – Unit 1 & 2</h1>
+      
+
+      <div class="meta">
+        <span class="badge">Weights → Easy: 1 • Medium: 2 • Hard: 3</span>
+        <span class="badge">Total Possible Points: <span id="totalPoints">—</span></span>
+        <div class="row" style="margin-left:auto">
+          <button id="lifelineBtn" type="button" title="Hỏi MVT" aria-haspopup="dialog" aria-controls="overlay">🆘 Nhờ Chuyên Gia</button>
+          <button id="resetBtn" class="secondary" type="button">Reset</button>
+        </div>
+      </div>
+
+      <div class="progress" aria-label="progress"><div id="bar" class="bar"></div></div>
+
+      <section id="qContainer" class="qwrap" aria-live="polite"></section>
+
+      <div id="result" class="result hidden" role="status" aria-live="polite"></div>
+      <div class="row hidden" id="reviewButtons" style="margin-top:10px">
+        <button id="reviewIncorrectBtn" type="button" class="secondary">Xem câu sai</button>
+        <button id="reviewAllBtn" type="button" class="secondary">Xem tất cả</button>
+      </div>
+      <section id="reviewPanel" class="review hidden" aria-label="Review"></section>
+    </div>
+  </div>
+
+  <!-- Lifeline Modal (Hỏi MVT) -->
+  <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mvtTitle" aria-hidden="true">
+    <div class="modal" role="document">
+      <h4 id="mvtTitle">Tìm được chuyên gia: MVT</h4>
+      <p><strong>Thông tin liên hệ: 500k TSOSAD255 MBBANK</strong></p>
+      <div class="row" style="justify-content:flex-end">
+        <button id="okMvt" type="button" autofocus>OK</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+// ===============================
+// Data
+// ===============================
+const baseItems = [
+  { id:'b1', diff:'medium', weight:2,
+    stemA:'An ', stemB:' institution is an organization, such as a library or archive, that collects, stores, organizes, processes, and provides access to information.',
+    answer:'information', explain:'Phrase: "information institution" (collects, stores, organizes, processes, and provides access).'
+  },
+  { id:'b2', diff:'easy', weight:1,
+    stemA:'The ', stemB:' library holds print resources, while the virtual library holds digital ones.',
+    answer:'physical', explain:'Contrasted pair: physical (print) vs virtual (digital).'
+  },
+  { id:'b3', diff:'medium', weight:2,
+    stemA:'Data collected through ', stemB:' and surveys is essential for planning and policy-making.',
+    answer:'observations', explain:'Canonical phrase: observations and surveys.'
+  },
+  { id:'b4', diff:'medium', weight:2,
+    stemA:'A ', stemB:' house serves as an agency for the collection, classification, and distribution of data or information.',
+    answer:'clearing', explain:'Fixed term: clearing house.'
+  },
+  { id:'b5', diff:'easy', weight:1,
+    stemA:'In modern librarianship, knowledge is moving from print to ', stemB:' formats.',
+    answer:'digital', explain:'Shift from print to digital.'
+  },
+  { id:'b6', diff:'hard', weight:3,
+    stemA:'The rise of information ', stemB:' has completely transformed the role of libraries and information centers.',
+    answer:'technologies', explain:'Impact of information technologies.'
+  },
+  { id:'b7', diff:'medium', weight:2,
+    stemA:'Non-institutionalized information services include knowledge mediators, information filters, human networks, and ', stemB:' brokers.',
+    answer:'information', explain:'Term in slides: information brokers.'
+  },
+  { id:'b8', diff:'medium', weight:2,
+    stemA:'Modern librarians must take on roles such as knowledge facilitators, research analysts, and information ', stemB:'.',
+    answer:'managers', explain:'Role list includes information managers.'
+  }
+];
+
+// ===============================
+// Helpers
+// ===============================
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function lettersForAnswer(ans){
+  const alpha='abcdefghijklmnopqrstuvwxyz';
+  const core=ans.toLowerCase().replace(/[^a-z]/g,'').split('');
+  // add 3 random letters not from the answer (when possible)
+  const extras=[]; let pool=alpha.split('').filter(c=>!core.includes(c));
+  for(let i=0;i<3;i++){
+    if(pool.length===0){ pool=alpha.split(''); }
+    const idx=Math.floor(Math.random()*pool.length);
+    extras.push(pool.splice(idx,1)[0]);
+  }
+  return shuffle(core.concat(extras));
+}
+
+// ===============================
+// State
+// ===============================
+let items=[]; let current=0; const answers={}; let lifelineUsed=false;
+
+const totalPointsEl=document.getElementById('totalPoints');
+const qContainer=document.getElementById('qContainer');
+const bar=document.getElementById('bar');
+const resultEl=document.getElementById('result');
+const reviewBtns=document.getElementById('reviewButtons');
+const reviewIncorrectBtn=document.getElementById('reviewIncorrectBtn');
+const reviewAllBtn=document.getElementById('reviewAllBtn');
+const reviewPanel=document.getElementById('reviewPanel');
+const resetBtn=document.getElementById('resetBtn');
+const lifelineBtn=document.getElementById('lifelineBtn');
+const overlay=document.getElementById('overlay');
+const okMvt=document.getElementById('okMvt');
+
+function totalPossible(){return items.reduce((s,it)=>s+it.weight,0)}
+function progress(){bar.style.width=Math.round((current/items.length)*100)+'%'}
+
+function renderQuestion(){
+  progress(); reviewPanel.classList.add('hidden'); reviewBtns.classList.add('hidden'); resultEl.classList.add('hidden');
+  const it=items[current]; const n=current+1; qContainer.innerHTML='';
+
+  const h=document.createElement('h3'); h.innerHTML=`<span style="opacity:.9">Q${n}/${items.length}.</span> Build the answer by picking letters.`;
+  const d=document.createElement('div'); d.className='difficulty'; d.textContent=`Difficulty: ${it.diff} • Weight: ${it.weight}`;
+
+  const p=document.createElement('div'); p.className='sentence';
+  const slots=[]; const answer=it.answer.replace(/\s+/g,'');
+  const before=document.createTextNode(it.stemA); const after=document.createTextNode(it.stemB);
+  p.append(before);
+  for(let i=0;i<answer.length;i++){
+    const s=document.createElement('span');
+    s.className='slot'; s.dataset.pos=i; s.textContent='';
+    slots.push(s); p.appendChild(s);
+  }
+  p.append(after);
+
+  const bank=document.createElement('div'); bank.className='bank';
+  const letters=lettersForAnswer(it.answer);
+  letters.forEach((ch)=>{
+    const btn=document.createElement('button');
+    btn.type='button'; btn.className='tile';
+    btn.textContent=ch.toUpperCase(); btn.dataset.char=ch;
+    btn.addEventListener('click',()=>{
+      // find first empty slot
+      const slot=slots.find(s=>!s.textContent);
+      if(!slot) return; // full
+      slot.textContent=ch.toUpperCase(); slot.classList.add('filled');
+      btn.classList.add('used'); btn.disabled=true; // consume tile
+      updateControls();
+    });
+    bank.appendChild(btn);
+  });
+
+  const actions=document.createElement('div'); actions.className='actions';
+  const back=document.createElement('button'); back.type='button'; back.className='secondary'; back.textContent='Backspace';
+  back.addEventListener('click',()=>{
+    // remove last filled slot
+    for(let i=slots.length-1;i>=0;i--){
+      if(slots[i].textContent){
+        const ch=slots[i].textContent.toLowerCase();
+        slots[i].textContent=''; slots[i].classList.remove('filled');
+        // re-enable one matching used tile (the earliest used)
+        const used=[...bank.querySelectorAll('.tile.used')];
+        const t=used.find(x=>x.dataset.char===ch);
+        if(t){ t.classList.remove('used'); t.disabled=false; }
+        break;
+      }
+    }
+    updateControls();
+  });
+
+  const clear=document.createElement('button'); clear.type='button'; clear.className='secondary'; clear.textContent='Clear';
+  clear.addEventListener('click',()=>{
+    slots.forEach(s=>{
+      if(s.textContent){
+        const ch=s.textContent.toLowerCase();
+        const t=[...bank.querySelectorAll('.tile.used')].find(x=>x.dataset.char===ch);
+        if(t){ t.classList.remove('used'); t.disabled=false; }
+        s.textContent=''; s.classList.remove('filled');
+      }
+    });
+    updateControls();
+  });
+
+  const check=document.createElement('button'); check.type='button'; check.textContent='Check & Next'; check.disabled=true;
+  check.addEventListener('click',()=>{
+    const built=slots.map(s=>s.textContent.toLowerCase()).join('');
+    answers[it.id]=built;
+    // score this one (we only store; final scoring happens at finish)
+    if(current<items.length-1){
+      current++; renderQuestion();
+    }else{ finish(); qContainer.innerHTML='<em>All questions answered.</em>'; }
+  });
+
+  function updateControls(){
+    const full=slots.every(s=>!!s.textContent);
+    check.disabled=!full;
+  }
+
+  qContainer.appendChild(h); qContainer.appendChild(d); qContainer.appendChild(p); qContainer.appendChild(bank);
+  actions.appendChild(back); actions.appendChild(clear); actions.appendChild(check); qContainer.appendChild(actions);
+  updateControls();
+}
+
+function scoreAll(){
+  let earned=0, correctCount=0; const detail={};
+  items.forEach(it=>{
+    const built=(answers[it.id]||'').toLowerCase();
+    const truth=it.answer.toLowerCase().replace(/\s+/g,'');
+    const ok=built===truth; if(ok){earned+=it.weight; correctCount++;}
+    detail[it.id]={ok, picked:built, correct:it.answer, explain:it.explain};
+  });
+  const total=totalPossible(); const percent=Math.round(100*earned/total);
+  return {earned,total,percent,correctCount,detail};
+}
+
+function finish(){
+  bar.style.width='100%';
+  const s=scoreAll();
+  resultEl.classList.remove('hidden');
+  resultEl.innerHTML=`<div><strong>Tứ đại linh thú TEAM đã chấm cho bạn:</strong> ${s.earned} điểm</div>
+  <div style="color:var(--muted)">Details: ${s.earned} / ${s.total} points (${s.percent}%). Correct: ${s.correctCount}/${items.length}.</div>`;
+  reviewBtns.classList.remove('hidden');
+}
+
+function buildReviewCards(onlyWrong){
+  reviewPanel.innerHTML=''; const s=scoreAll(); let i=0;
+  items.forEach(it=>{
+    const row=s.detail[it.id]; i++; if(onlyWrong&&row.ok) return;
+    const card=document.createElement('div'); card.className='rev-card';
+    const title=document.createElement('h4'); title.className='rev-title'; title.textContent=`Q${i}`;
+
+    const status=document.createElement('div'); status.innerHTML=row.ok?'<span class="pill correct">Correct</span>':'<span class="pill wrong">Incorrect</span>';
+    const sent=document.createElement('div'); const picked=row.picked?row.picked:'—';
+    sent.innerHTML=`${it.stemA}<strong>${picked}</strong>${it.stemB}`;
+    const correct=document.createElement('div'); correct.innerHTML=`<strong>Correct:</strong> ${it.answer}`;
+    const ex=document.createElement('div'); ex.className='explain'; ex.textContent=it.explain;
+
+    const foot=document.createElement('div'); foot.className='difficulty'; foot.textContent=`Difficulty: ${it.diff} • Weight: ${it.weight}`;
+
+    card.appendChild(title); card.appendChild(status); card.appendChild(sent); card.appendChild(correct); card.appendChild(ex); card.appendChild(foot);
+    reviewPanel.appendChild(card);
+  });
+  reviewPanel.classList.remove('hidden');
+}
+
+function openMVT(){overlay.classList.remove('hidden'); overlay.removeAttribute('aria-hidden'); setTimeout(()=>okMvt.focus(),0)}
+function closeMVT(){overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true')}
+
+function start(){
+  items=shuffle(baseItems.slice()); current=0; lifelineUsed=false; Object.keys(answers).forEach(k=>delete answers[k]);
+  totalPointsEl.textContent=totalPossible(); bar.style.width='0%'; closeMVT(); renderQuestion(); lifelineBtn.disabled=false;
+}
+
+// Bindings
+reviewIncorrectBtn.addEventListener('click',()=>buildReviewCards(true));
+reviewAllBtn.addEventListener('click',()=>buildReviewCards(false));
+resetBtn.addEventListener('click',()=>{reviewPanel.classList.add('hidden'); reviewBtns.classList.add('hidden'); resultEl.classList.add('hidden'); start();});
+
+lifelineBtn.addEventListener('click',(e)=>{e.preventDefault(); if(lifelineUsed) return; openMVT();});
+okMvt.addEventListener('click',()=>{closeMVT(); lifelineUsed=true; lifelineBtn.disabled=true});
+window.addEventListener('keydown',ev=>{ if(ev.key==='Escape'&&!overlay.classList.contains('hidden')) closeMVT(); });
+
+// ===============================
+// Self-tests (console) – do not affect UI
+// ===============================
+(function runSelfTests(){
+  function countChars(str){return str.split('').reduce((m,c)=>{m[c]=(m[c]||0)+1;return m;},{});} 
+  const tests = [];
+  tests.push((()=>{ const a='information'; const L=lettersForAnswer(a); return L.length===a.replace(/\s+/g,'').length+3; })());
+  tests.push((()=>{ const a='digital'; const L=lettersForAnswer(a); const need=countChars(a); const got=countChars(L.join('')); return Object.keys(need).every(k=> (got[k]||0) >= need[k]); })());
+  tests.push((()=>{ // scoreAll with perfect answers should give total points
+    items = baseItems.slice(0,3); // small set
+    items.forEach(x=>answers[x.id]=x.answer.toLowerCase().replace(/\s+/g,''));
+    const s=items.reduce((sum,i)=>sum+i.weight,0);
+    const res=scoreAll();
+    return res.earned===s && res.correctCount===items.length; 
+  })());
+  const allPass = tests.every(Boolean);
+  console.log('[Letter-Builder] Self-tests pass:', allPass, tests);
+})();
+
+// Init
+start();
+</script>
+</body>
+</html>
