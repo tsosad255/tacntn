@@ -72,8 +72,6 @@
   <div class="container">
     <div class="card">
       <h1>Letter‑Builder Quiz – Unit 1 & 2</h1>
-      <p class="lead">Ghép chữ để tạo đáp án đúng. Hiển thị từng câu một. Mỗi lượt xáo thứ tự câu và chữ.</p>
-
       <div class="meta">
         <span class="badge" id="timerBadge" aria-live="polite" title="Thời gian còn lại">⏳ 05:00</span>
         <span class="badge">Weights → Easy: 1 • Medium: 2 • Hard: 3</span>
@@ -89,11 +87,11 @@
         <div class="pre-grid">
           <div>
             <label for="fullName">Họ và tên</label>
-            <input id="fullName" type="text" placeholder="VD: Nguyễn Văn A" autocomplete="name"/>
+            <input id="fullName" type="text" placeholder="VD: Nguyễn Trần Hữu Thành" autocomplete="name"/>
           </div>
           <div>
             <label for="studentId">Mã số sinh viên (MSSV)</label>
-            <input id="studentId" type="text" placeholder="VD: DTT1241xxx" autocomplete="off"/>
+            <input id="studentId" type="text" placeholder="VD: 3124390000" autocomplete="off"/>
           </div>
         </div>
         <div class="row" style="margin-top:10px; gap:12px">
@@ -106,13 +104,13 @@
       <div class="progress" aria-label="progress"><div id="bar" class="bar"></div></div>
 
       <section id="qContainer" class="qwrap" aria-live="polite">
-        <em>Nhập thông tin rồi bấm “Bắt đầu làm bài”.</em>
+        <em>Khai báo danh tính đi rồi bấm “Bắt đầu làm bài”.</em>
       </section>
 
       <div id="result" class="result hidden" role="status" aria-live="polite"></div>
       <div class="row hidden" id="reviewButtons" style="margin-top:10px">
-        <button id="reviewIncorrectBtn" type="button" class="secondary">Xem câu sai</button>
-        <button id="reviewAllBtn" type="button" class="secondary">Xem tất cả</button>
+        <button id="reviewIncorrectBtn" type="button" class="secondary">Xem lại câu sai</button>
+        <button id="reviewAllBtn" type="button" class="secondary">Xem lại tất cả</button>
       </div>
       <section id="reviewPanel" class="review hidden" aria-label="Review"></section>
     </div>
@@ -136,7 +134,7 @@
 // ===============================
 const CONFIG = {
   // !!! THAY THẾ CHUỖI DƯỚI ĐÂY BẰNG URL WEB APP (đuôi /exec) CỦA BẠN !!!
-  gasUrl: 'https://script.google.com/macros/s/AKfycbxqxBTN2ipAcLSWm3OgfaJtx6bqULk87Re86blrqTqEK7L7zb5yUqaa0OVNrYJ94JU/exec'
+  gasUrl: 'https://script.google.com/macros/s/AKfycbz6xvGtp27qbjZXy64fWDO33l4kmqXVWBNVCR3rBtg8B_y6rjHCQQIfW6XVTrdL2g/exec'
 };
 function isGasUrlReady(){
   return typeof CONFIG.gasUrl === 'string'
@@ -395,7 +393,7 @@ function finish(){
     <div><strong>Kết quả:</strong> ${s.earned} điểm</div>
     <div style="color:var(--muted)">Chi tiết: ${s.earned} / ${s.total} điểm (${s.percent}%). Đúng: ${s.correctCount}/${items.length}.</div>
     <div style="color:var(--muted)">Người làm: <strong>${escapeHtml(fullName)}</strong> • MSSV: <strong>${escapeHtml(studentId)}</strong></div>
-    <div id="sendStatus" style="margin-top:8px;color:var(--muted)"><em>Đang gửi kết quả lên Google Sheets…</em></div>
+    <div id="sendStatus" style="margin-top:8px;color:var(--muted)"><em>Đang gửi kết quả…</em></div>
   `;
   reviewBtns.classList.remove('hidden');
 
