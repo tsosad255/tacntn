@@ -59,7 +59,6 @@
   <div class="container">
     <div class="card">
       <h1>Unit 1 & 2 – Weighted Multiple-Choice Quiz</h1>
-      <p class="lead">Câu hỏi hiện <strong>từng câu một</strong>. Chọn đáp án để sang câu tiếp theo. Thứ tự được <strong>xáo ngẫu nhiên</strong> mỗi lượt.</p>
 
       <div class="meta">
         <span class="badge">Weights → Easy: 1 • Medium: 2 • Hard: 3</span>
@@ -74,11 +73,11 @@
         <div class="pre-grid">
           <div>
             <label for="fullName">Họ và tên</label>
-            <input id="fullName" type="text" placeholder="VD: Nguyễn Văn A" autocomplete="name"/>
+            <input id="fullName" type="text" placeholder="VD: Nguyễn Trần Hữu Thành" autocomplete="name"/>
           </div>
           <div>
             <label for="studentId">Mã số sinh viên (MSSV)</label>
-            <input id="studentId" type="text" placeholder="VD: DTT1241xxx" autocomplete="off"/>
+            <input id="studentId" type="text" placeholder="VD: 3124390000" autocomplete="off"/>
           </div>
         </div>
         <div class="row" style="margin-top:10px; gap:12px">
@@ -103,7 +102,7 @@
 
       <section id="reviewPanel" class="review hidden" aria-label="Review"></section>
 
-      <p class="foot">Lưu ý: Kết quả sẽ tự động gửi lên Google Sheets qua Apps Script sau khi nộp hoặc hết giờ.</p>
+      <p class="foot">Lưu ý: Kết quả sẽ được tự động gửi sau khi hết giờ.</p>
     </div>
   </div>
 
@@ -306,7 +305,7 @@ function finish(){
     <div><strong>Kết quả:</strong> ${summary.earned} điểm</div>
     <div style="color:var(--muted)">Chi tiết: ${summary.earned} / ${summary.total} điểm (${summary.percent}%). Đúng: ${summary.correctCount}/${quiz.length}.</div>
     <div style="color:var(--muted)">Người làm: <strong>${escapeHtml(fullName)}</strong> • MSSV: <strong>${escapeHtml(studentId)}</strong></div>
-    <div id="sendStatus" style="margin-top:8px;color:var(--muted)"><em>Đang gửi kết quả lên Google Sheets…</em></div>
+    <div id="sendStatus" style="margin-top:8px;color:var(--muted)"><em>Đang gửi kết quả…</em></div>
   `;
   reviewBtns.classList.remove('hidden');
   (async()=>{
