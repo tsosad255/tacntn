@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -60,27 +60,55 @@
   .modal{background:var(--panel); border:1px solid rgba(148,163,184,.25); border-radius:16px; padding:18px; max-width:420px; width:92%}
   .modal h4{margin:0 0 8px}
   .modal p{margin:8px 0 14px}
+
+  .badge.warn{ border-color: rgba(245,158,11,.5); color: var(--warn); }
+
+  /* Pre-start form */
+  .prestart{border:1px dashed rgba(148,163,184,.3); border-radius:14px; padding:14px; background:rgba(17,24,39,.55); margin-top:12px}
+  .pre-grid{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+  .prestart label{font-size:.9rem; color:var(--muted)}
+  .prestart input{width:100%; padding:10px 12px; border-radius:10px; background:#0b1220; border:1px solid rgba(148,163,184,.25); color:var(--text)}
+  .error{color:#ffd2d2; font-size:.9rem; margin-top:6px}
 </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h1>Unit 1 & 2 – Weighted Multiple‑Choice Quiz</h1>
-      <p class="lead">Questions appear <strong>one by one</strong>. Choose an option to go to the next question. Order is <strong>randomized</strong> each time.
-      </p>
+      <p class="lead">Câu hỏi hiện <strong>từng câu một</strong>. Chọn đáp án để sang câu tiếp theo. Thứ tự được <strong>xáo ngẫu nhiên</strong> mỗi lượt.</p>
 
       <div class="meta">
         <span class="badge">Weights → Easy: 1 • Medium: 2 • Hard: 3</span>
         <span class="badge">Total Possible Points: <span id="totalPoints">—</span></span>
+        <span class="badge" id="timerBadge" aria-live="polite" title="Thời gian còn lại">⏳ 05:00</span>
         <div class="row" style="margin-left:auto">
           <button id="lifelineBtn" type="button" title="Hỏi MVT" aria-haspopup="dialog" aria-controls="overlay">🆘 Nhờ Chuyên Gia</button>
-          <button id="resetBtn" class="secondary" type="button">Reset</button>
         </div>
       </div>
 
-      <div class="progress" aria-label="progress"><div id="bar" class="bar"></div></div>
+      <div id="preStart" class="prestart">
+        <div class="pre-grid">
+          <div>
+            <label for="fullName">Họ và tên</label>
+            <input id="fullName" type="text" placeholder="VD: Nguyễn Văn A" autocomplete="name"/>
+          </div>
+          <div>
+            <label for="studentId">Mã số sinh viên (MSSV)</label>
+            <input id="studentId" type="text" placeholder="VD: DTT1241xxx" autocomplete="off"/>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px; gap:12px">
+          <button id="startBtn" type="button">Bắt đầu làm bài</button>
+          <button id="cfgBtn" type="button" class="secondary" title="Nhập URL Web App của Apps Script">Cấu hình Google Sheets</button>
+          <span id="preErr" class="error" style="display:none">Vui lòng nhập đủ Họ tên và MSSV.</span>
+        </div>
+      </div>
 
-      <section id="qContainer" class="qwrap" aria-live="polite"></section>
+      <div class="progress" aria-label="progress" style="margin-top:12px"><div id="bar" class="bar"></div></div>
+
+      <section id="qContainer" class="qwrap" aria-live="polite">
+        <em>Nhập thông tin rồi bấm “Bắt đầu làm bài”.</em>
+      </section>
 
       <div id="result" class="result hidden" role="status" aria-live="polite"></div>
 
@@ -91,7 +119,7 @@
 
       <section id="reviewPanel" class="review hidden" aria-label="Review"></section>
 
-      <p class="foot">Note: Questions and answers are based on your slides (Unit 1 & Unit 2). Explanations summarize why the correct option is right.</p>
+      <p class="foot">Lưu ý: Câu hỏi/đáp án dựa trên slide của bạn (Unit 1 & Unit 2). Phần giải thích tóm tắt lý do tại sao đáp án đúng.</p>
     </div>
   </div>
 
@@ -188,10 +216,13 @@ function shuffle(arr){
 }
 
 // State
-let quiz = [];              // randomized on start/reset
+let quiz = [];              // randomized on start
 let current = 0;            // index of current question
 let answers = {};           // {id: pickedIndex}
 let lifelineUsed = false;   // one-time lifeline
+
+let fullName = '';
+let studentId = '';
 
 const totalPointsEl = document.getElementById('totalPoints');
 const qContainer = document.getElementById('qContainer');
@@ -201,10 +232,146 @@ const reviewBtns = document.getElementById('reviewButtons');
 const reviewIncorrectBtn = document.getElementById('reviewIncorrectBtn');
 const reviewAllBtn = document.getElementById('reviewAllBtn');
 const reviewPanel = document.getElementById('reviewPanel');
-const resetBtn = document.getElementById('resetBtn');
 const lifelineBtn = document.getElementById('lifelineBtn');
 const overlay = document.getElementById('overlay');
 const okMvt = document.getElementById('okMvt');
+const timerBadge = document.getElementById('timerBadge');
+
+// Pre-start elements
+const preStart = document.getElementById('preStart');
+const startBtn = document.getElementById('startBtn');
+const cfgBtn = document.getElementById('cfgBtn');
+const fullNameInput = document.getElementById('fullName');
+const studentIdInput = document.getElementById('studentId');
+const preErr = document.getElementById('preErr');
+
+// ====== Timer (5 minutes) & Auto-submit ======
+const LIMIT_MS = 5 * 60 * 1000;  // 5 phút
+let deadline = 0;
+let timerId = null;
+let finished = false;
+let timeUp = false;
+let startedAt = 0;
+
+function fmtTime(ms){
+  if(ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function updateTimer(){
+  const left = deadline - Date.now();
+  if(timerBadge){
+    if(left <= 30_000){ timerBadge.classList.add('warn'); }
+    else{ timerBadge.classList.remove('warn'); }
+    timerBadge.textContent = '⏳ ' + fmtTime(left);
+  }
+  if(left <= 0){
+    stopTimer();
+    timeUp = true;
+    autoSubmit();
+  }
+}
+
+function startTimer(){
+  stopTimer();
+  startedAt = Date.now();
+  deadline = startedAt + LIMIT_MS;
+  timerId = setInterval(updateTimer, 250);
+  updateTimer();
+}
+
+function stopTimer(){
+  if(timerId){ clearInterval(timerId); timerId = null; }
+}
+
+function disableQuizInputs(){
+  qContainer.querySelectorAll('input[type=radio]').forEach(el => el.disabled = true);
+  lifelineBtn.disabled = true;
+}
+
+function autoSubmit(){
+  if(finished) return;
+  disableQuizInputs();
+  qContainer.innerHTML = '<em>⏱️ Hết giờ — hệ thống đã tự động nộp bài.</em>';
+  finish();
+}
+
+// ====== Google Sheets (Apps Script Web App) ======
+const CONFIG = {
+  gasUrl: (localStorage.getItem('gasUrl') || '').trim()
+};
+
+function ensureGasUrl(interactive=true){
+  if(!CONFIG.gasUrl && interactive){
+    const u = prompt('Dán URL Web App của Google Apps Script (kết thúc bằng /exec):', '');
+    if(u){ localStorage.setItem('gasUrl', u.trim()); CONFIG.gasUrl = u.trim(); }
+  }
+}
+
+cfgBtn.addEventListener('click', ()=>{
+  ensureGasUrl(true);
+  if(CONFIG.gasUrl){
+    alert('Đã lưu URL Web App:\n' + CONFIG.gasUrl + '\nBạn có thể bắt đầu làm bài.');
+  }
+});
+
+function buildAttemptPayload(summary){
+  const endedAt = Date.now();
+  const durationMs = Math.max(0, endedAt - startedAt);
+  return {
+    attemptId: String(endedAt) + '-' + Math.random().toString(36).slice(2,8),
+    timeStartISO: new Date(startedAt).toISOString(),
+    timeEndISO: new Date(endedAt).toISOString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    durationMs,
+    timeUp,
+    score: summary.earned,
+    totalPoints: summary.total,
+    percent: summary.percent,
+    correctCount: summary.correctCount,
+    totalQuestions: quiz.length,
+    answers: quiz.map(q => {
+      const pick = answers[q.id];
+      const isCorrect = pick === q.correctIndex;
+      return { id: q.id, picked: (pick ?? null), correctIndex: q.correctIndex, weight: q.weight, isCorrect };
+    }),
+    fullName,
+    studentId,
+    userAgent: navigator.userAgent
+  };
+}
+
+async function sendToSheets(payload){
+  if(!CONFIG.gasUrl){ throw new Error('Chưa cấu hình URL Apps Script.'); }
+  let res = null;
+  try {
+    res = await fetch(CONFIG.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'cors',
+      redirect: 'follow',
+    });
+  } catch(e) {
+    // network or CORS preflight failed → try opaque
+  }
+  if(res && res.ok){
+    const text = await res.text().catch(()=>'');
+    return text || 'OK';
+  } else {
+    // fallback fire-and-forget
+    await fetch(CONFIG.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors'
+    });
+    return 'SENT_OPAQUE';
+  }
+}
 
 function totalPossiblePoints(){
   return quiz.reduce((s,q)=>s+q.weight,0);
@@ -226,10 +393,10 @@ function renderQuestion(){
 
   qContainer.innerHTML = '';
   const title = document.createElement('h3');
-  title.innerHTML = `<span style="opacity:.9">Q${qNumber}/${quiz.length}.</span> ${q.question}`;
+  title.innerHTML = `<span style="opacity:.9">Câu ${qNumber}/${quiz.length}.</span> ${q.question}`;
   const diff = document.createElement('div');
   diff.className = 'difficulty';
-  diff.textContent = `Difficulty: ${q.difficulty} • Weight: ${q.weight}`;
+  diff.textContent = `Độ khó: ${q.difficulty} • Trọng số: ${q.weight}`;
 
   const opts = document.createElement('div');
   opts.className = 'options';
@@ -252,7 +419,7 @@ function renderQuestion(){
     radio.addEventListener('change', ()=>{
       answers[q.id] = oi;
       label.style.borderColor = 'var(--accent)';
-      setTimeout(()=>{ nextStep(); }, 250);
+      setTimeout(()=>{ nextStep(); }, 200);
     });
 
     label.appendChild(radio);
@@ -265,7 +432,7 @@ function renderQuestion(){
   qContainer.appendChild(opts);
   const hint = document.createElement('div');
   hint.className = 'hint';
-  hint.textContent = 'Select an option to continue…';
+  hint.textContent = 'Chọn một đáp án để tiếp tục…';
   qContainer.appendChild(hint);
 }
 
@@ -276,7 +443,7 @@ function scoreQuiz(){
     const pick = answers[q.id];
     const isCorrect = pick === q.correctIndex;
     if(isCorrect){ earned += q.weight; correctCount++; }
-    detail[q.id] = { isCorrect, picked: pick ?? null, correctIndex: q.correctIndex };
+    detail[q.id] = { isCorrect, picked: (pick ?? null), correctIndex: q.correctIndex };
   });
   const total = totalPossiblePoints();
   const percent = Math.round((earned/total)*100);
@@ -284,14 +451,48 @@ function scoreQuiz(){
 }
 
 function finish(){
-  bar.style.width = '100%';
+  stopTimer();
+  finished = true;
   const summary = scoreQuiz();
+  bar.style.width = '100%';
   resultEl.classList.remove('hidden');
   resultEl.innerHTML = `
-    <div><strong>Tứ đại linh thú TEAM đã chấm cho bạn:</strong> ${summary.earned} điểm</div>
-    <div style="color:var(--muted)">Details: ${summary.earned} / ${summary.total} points (${summary.percent}%). Correct: ${summary.correctCount}/${quiz.length}.</div>
+    ${timeUp ? '<div class="badge warn">⏱️ Time up — auto-submitted</div>' : ''}
+    <div><strong>Kết quả:</strong> ${summary.earned} điểm</div>
+    <div style="color:var(--muted)">Chi tiết: ${summary.earned} / ${summary.total} điểm (${summary.percent}%). Đúng: ${summary.correctCount}/${quiz.length}.</div>
+    <div style="color:var(--muted)">Người làm: <strong>${escapeHtml(fullName)}</strong> • MSSV: <strong>${escapeHtml(studentId)}</strong></div>
+    <div id="sendStatus" style="margin-top:8px;color:var(--muted)"><em>Đang gửi kết quả lên Google Sheets…</em></div>
   `;
   reviewBtns.classList.remove('hidden');
+
+  // Gửi dữ liệu lên Google Sheets (Apps Script)
+  (async () => {
+    try{
+      const payload = buildAttemptPayload(summary);
+      const resp = await sendToSheets(payload);
+      const el = document.getElementById('sendStatus');
+      if(el) el.innerHTML = '✅ Đã gửi kết quả thành công.';
+    }catch(err){
+      const el = document.getElementById('sendStatus');
+      if(el) el.innerHTML = '⚠️ Không gửi được kết quả. Nhấp vào đây để cấu hình URL và thử lại.';
+      if(el){
+        el.style.cursor = 'pointer';
+        el.onclick = async ()=>{
+          try{
+            ensureGasUrl(true);
+            const payload = buildAttemptPayload(summary);
+            await sendToSheets(payload);
+            el.textContent = '✅ Đã gửi kết quả thành công.';
+            el.onclick = null;
+            el.style.cursor = 'default';
+          }catch(e2){
+            alert('Vẫn lỗi gửi: ' + e2.message + '\nBạn đã triển khai Web App và cho phép Anyone access chưa?');
+          }
+        };
+      }
+      console.error('Send error:', err);
+    }
+  })();
 }
 
 function buildReviewCards(filterFn){
@@ -306,22 +507,22 @@ function buildReviewCards(filterFn){
 
     const title = document.createElement('h4');
     title.className = 'rev-title';
-    title.textContent = `Q${qi+1}. ${q.question}`;
+    title.textContent = `Câu ${qi+1}. ${q.question}`;
 
     const userPickIdx = row.picked;
-    const userPickTxt = (userPickIdx!==null && userPickIdx!==undefined) ? `${String.fromCharCode(65+userPickIdx)}. ${q.options[userPickIdx]}` : '— (no answer)';
+    const userPickTxt = (userPickIdx!==null && userPickIdx!==undefined) ? `${String.fromCharCode(65+userPickIdx)}. ${q.options[userPickIdx]}` : '— (chưa chọn)';
     const correctTxt = `${String.fromCharCode(65+q.correctIndex)}. ${q.options[q.correctIndex]}`;
 
     const status = document.createElement('div');
     status.innerHTML = row.isCorrect
-      ? `<span class="pill correct">Correct</span>`
-      : `<span class="pill wrong">Incorrect</span>`;
+      ? `<span class="pill correct">Đúng</span>`
+      : `<span class="pill wrong">Sai</span>`;
 
     const picked = document.createElement('div');
-    picked.innerHTML = `<strong>Your answer:</strong> ${userPickTxt}`;
+    picked.innerHTML = `<strong>Đáp án của bạn:</strong> ${userPickTxt}`;
 
     const correct = document.createElement('div');
-    correct.innerHTML = `<strong>Correct answer:</strong> ${correctTxt}`;
+    correct.innerHTML = `<strong>Đáp án đúng:</strong> ${correctTxt}`;
 
     const explain = document.createElement('div');
     explain.className = 'explain';
@@ -329,7 +530,7 @@ function buildReviewCards(filterFn){
 
     const foot = document.createElement('div');
     foot.className = 'foot';
-    foot.textContent = `Difficulty: ${q.difficulty} • Weight: ${q.weight}`;
+    foot.textContent = `Độ khó: ${q.difficulty} • Trọng số: ${q.weight}`;
 
     card.appendChild(title);
     card.appendChild(status);
@@ -349,16 +550,14 @@ function nextStep(){
   if(current < quiz.length){
     renderQuestion();
   } else {
-    qContainer.innerHTML = '<em>All questions answered.</em>';
+    qContainer.innerHTML = '<em>Đã trả lời hết các câu hỏi.</em>';
     finish();
   }
 }
 
 function openMVT(){
-  // Only open when user clicks the button
   overlay.classList.remove('hidden');
   overlay.removeAttribute('aria-hidden');
-  // Focus the OK button for accessibility
   setTimeout(()=>{ okMvt.focus(); }, 0);
 }
 function closeMVT(){
@@ -366,6 +565,7 @@ function closeMVT(){
   overlay.setAttribute('aria-hidden','true');
 }
 
+// ====== Start flow with pre-start form ======
 function start(){
   // randomize order each run
   quiz = shuffle(baseQuiz.slice());
@@ -373,12 +573,41 @@ function start(){
   current = 0;
   lifelineUsed = false;
   lifelineBtn.disabled = false;
+  finished = false;
+  timeUp = false;
+
   totalPointsEl.textContent = totalPossiblePoints();
   bar.style.width = '0%';
-  // Ensure modal is closed on start
   closeMVT();
+  startTimer();
   renderQuestion();
 }
+
+startBtn.addEventListener('click', ()=>{
+  const fn = (fullNameInput.value || '').trim();
+  const sid = (studentIdInput.value || '').trim();
+  if(!fn || !sid){
+    preErr.style.display = '';
+    return;
+  }
+  preErr.style.display = 'none';
+  fullName = fn;
+  studentId = sid;
+  localStorage.setItem('quiz_fullName', fullName);
+  localStorage.setItem('quiz_studentId', studentId);
+  // hide prestart
+  preStart.classList.add('hidden');
+  // kick off quiz
+  start();
+});
+
+// preload saved info if present
+(function preloadSaved(){
+  const fn = localStorage.getItem('quiz_fullName') || '';
+  const sid = localStorage.getItem('quiz_studentId') || '';
+  if(fn) fullNameInput.value = fn;
+  if(sid) studentIdInput.value = sid;
+})();
 
 // Lifeline modal logic (one-time, user-initiated only)
 lifelineBtn.addEventListener('click', (e)=>{
@@ -391,7 +620,7 @@ okMvt.addEventListener('click', ()=>{
   lifelineUsed = true;
   lifelineBtn.disabled = true;
 });
-// Allow ESC to close if somehow opened
+// Allow ESC to close if opened
 window.addEventListener('keydown', (ev)=>{
   if(ev.key === 'Escape' && !overlay.classList.contains('hidden')){
     closeMVT();
@@ -406,16 +635,12 @@ reviewAllBtn.addEventListener('click', ()=>{
   buildReviewCards(()=>true);
 });
 
-// Reset
-resetBtn.addEventListener('click', ()=>{
-  reviewPanel.classList.add('hidden');
-  reviewBtns.classList.add('hidden');
-  resultEl.classList.add('hidden');
-  start();
-});
-
-// Init after DOM is parsed
-start();
+// Helpers
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[s]));
+}
 </script>
 </body>
 </html>
