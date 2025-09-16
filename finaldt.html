@@ -437,12 +437,22 @@ function closeMVT(){overlay.classList.add('hidden'); overlay.setAttribute('aria-
 
 // Start flow
 function start(){
-  if(!isGasUrlReady()){ cfgHint.style.display=''; return; }
-  cfgHint.style.display='none';
-  items=shuffle(baseItems.slice()); current=0; lifelineUsed=false; Object.keys(answers).forEach(k=>delete answers[k]);
-  totalPointsEl.textContent=totalPossible(); bar.style.width='0%'; closeMVT(); renderQuestion(); lifelineBtn.disabled=false;
-  startedAt=Date.now(); startTimer();
+  // KHÔNG cần if(!isGasUrlReady()) ... return;
+  items = shuffle(baseItems.slice());
+  current = 0;
+  lifelineUsed = false;
+  Object.keys(answers).forEach(k=>delete answers[k]);
+
+  totalPointsEl.textContent = totalPossible();
+  bar.style.width = '0%';
+  closeMVT();
+  renderQuestion();
+  lifelineBtn.disabled = false;
+
+  startedAt = Date.now();
+  startTimer();
 }
+
 
 // Bindings
 document.getElementById('reviewIncorrectBtn').addEventListener('click',()=>buildReviewCards(true));
@@ -453,15 +463,32 @@ document.getElementById('okMvt').addEventListener('click',()=>{closeMVT(); lifel
 
 window.addEventListener('keydown',ev=>{ if(ev.key==='Escape'&&!overlay.classList.contains('hidden')) closeMVT(); });
 
-document.getElementById('startBtn').addEventListener('click',()=>{
-  const fn=(fullNameInput.value||'').trim();
-  const sid=(studentIdInput.value||'').trim();
-  if(!fn || !sid){ preErr.style.display=''; return; }
-  preErr.style.display='none'; fullName=fn; studentId=sid;
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  const fn  = (fullNameInput.value || '').trim();
+  const sid = (studentIdInput.value || '').trim();
+
+  if(!fn || !sid){
+    preErr.style.display = '';
+    return;
+  }
+
+  // ✅ KIỂM TRA URL TRƯỚC KHI ẨN FORM
+  if(!isGasUrlReady()){
+    preErr.style.display = 'none';
+    cfgHint.style.display = '';  // hiện cảnh báo ngay dưới nút Start
+    return; // KHÔNG ẩn form, không ghi "Bắt đầu…"
+  }
+
+  // OK → ẩn form rồi bắt đầu
+  preErr.style.display = 'none';
+  cfgHint.style.display = 'none';
+  fullName  = fn;
+  studentId = sid;
   preStart.classList.add('hidden');
   qContainer.innerHTML = '<em>Bắt đầu…</em>';
   start();
 });
+
 </script>
 </body>
 </html>
