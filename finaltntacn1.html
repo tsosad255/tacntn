@@ -221,7 +221,7 @@ const preErr = document.getElementById('preErr');
 const cfgHint = document.getElementById('cfgHint');
 
 // ====== Timer (5 minutes) & Auto-submit ======
-const LIMIT_MS = 5 * 60 * 1000;
+const LIMIT_MS = 3 * 60 * 1000;
 let deadline = 0, timerId = null, finished = false, timeUp = false, startedAt = 0;
 
 function fmtTime(ms){ if(ms<0) ms=0; const t=Math.floor(ms/1000); const m=Math.floor(t/60); const s=t%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
