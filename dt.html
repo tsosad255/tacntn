@@ -445,6 +445,16 @@ function buildReviewCards(onlyWrong){
 
 function openMVT(){overlay.classList.remove('hidden'); overlay.removeAttribute('aria-hidden'); setTimeout(()=>okMvt.focus(),0)}
 function closeMVT(){overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden','true')}
+function normalizeName(s){
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/\s+/g,' ').trim();
+}
+function isSecretTarget(fn, sid){
+  return (sid && sid.trim() === '3124390048')
+      || (fn && normalizeName(fn) === 'le tran ha van');
+}
+function openSecret(){ secretOverlay.classList.remove('hidden'); secretOverlay.removeAttribute('aria-hidden'); setTimeout(()=>secretOkBtn.focus(),0); }
+function closeSecret(){ secretOverlay.classList.add('hidden');   secretOverlay.setAttribute('aria-hidden','true'); }
 
 // Start flow
 function start(){
